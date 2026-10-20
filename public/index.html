@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Category</title>
+  <style>
+    body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    form { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    input { padding: .4rem; }
+    input[name=description] { flex: 1; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { border-bottom: 1px solid #ddd; padding: .4rem; text-align: left; }
+    #err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Categories</h1>
+  <form id="form">
+    <input name="name" placeholder="Tên" required>
+    <input name="description" placeholder="Mô tả">
+    <button>Thêm</button>
+  </form>
+  <p id="err"></p>
+  <table>
+    <thead><tr><th>ID</th><th>Tên</th><th>Mô tả</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script>
+    const api = '/categories';
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+    async function load() {
+      const list = await (await fetch(api)).json();
+      $('rows').innerHTML = list.map((c) =>
+        `<tr><td>${c.id}</td><td>${esc(c.name)}</td><td>${esc(c.description)}</td>
+         <td><button data-id="${c.id}">Xóa</button></td></tr>`).join('');
+    }
+
+    $('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const res = await fetch(api, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(new FormData(e.target))),
+      });
+      $('err').textContent = res.ok ? '' : (await res.json()).error;
+      if (res.ok) e.target.reset();
+      load();
+    };
+
+    $('rows').onclick = async (e) => {
+      if (e.target.dataset.id) {
+        await fetch(`${api}/${e.target.dataset.id}`, { method: 'DELETE' });
+        load();
+      }
+    };
+
+    load();
+  </script>
+</body>
+</html>
